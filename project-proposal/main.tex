@@ -38,9 +38,9 @@
 
 % -----------------------------------------------------
 
-\title{Grievance-Resolution System for a Tier-2/3 City}
+\title{Smart Hospital Queue Optimizer}
 
-\BvrSetLabInstructor{Dr. Raghav B. Venkataramaiyer}
+\BvrSetLabInstructor{}
 
 \BvrSubtitle{%
   Project Proposal for UCS503P  \\
@@ -49,104 +49,95 @@
 }
 
 \author{
-  Vidya Vaidyanathan, CSED%
-  \thanks{Roll No: \texttt{1024030xxx}, %
-    Email: \texttt{vvaidhanathan\_be24\@thapar.edu}}
-  \and 
-  Bhanurekha Ganesan, CSED%
-  \thanks{Roll No: \texttt{1024030xxx}, %
-    Email: \texttt{bganesan\_be24\@thapar.edu}}
+  [Shubh Mittal ,Rishi Vikram Singh ,Ayush Mathur ], CSED%
+  \thanks{Roll No: \texttt{[1024170420,1024170412,1024170403]}, %
+    Email: \texttt{[smittal2]\_be24\@thapar.edu,rsingh_be24@thapar.edu}}
 }
 
-\date{\today}
+\date{\20th august 2026}
 
 \begin{document}
 \maketitle
 
 \section{Higher-order goal%
   \BvrHint{\ldots secondary framing}}
-This project aims to improve sustainable urban
-governance by reducing the time and effort required to
-resolve citizen issues. While the topic is broader than
-any single municipality, the immediate engineering
-objective is to translate \emph{efficient public
-  service delivery} into a measurable, deployable
-software solution.
+This project aims to reduce uncertainty and inefficiency in outpatient department (OPD) queue management at hospitals. While the topic is broader than any single hospital, the immediate engineering objective is to translate \emph{transparent, real-time patient flow} into a measurable, deployable software solution.
 
 \section{Time-to-value %
 \BvrHint{\ldots primary heuristic}}
 \begin{itemize}[leftmargin=0.7cm]
-    \item We will deliver meaningful increments quickly by prototyping the core user workflow and validating it with users within a short iteration window.
-    \item We will prioritize fast feedback over perfection by using weekly iterations (and targeting CI-backed automation early) to reduce release friction.
-    \item Success is defined by what can be delivered and measured in the first iteration, then improved based on user feedback.
+    \item We will deliver meaningful increments quickly by prototyping the core token-and-queue workflow first, and validating it against real requests within a short iteration window.
+    \item We will prioritize fast feedback over perfection by using weekly iterations, with each week producing an independently demonstrable milestone rather than a monolithic final build.
+    \item Success is defined by what can be delivered and measured in the first iteration (a working token-generation and wait-estimate API), then improved based on testing and use.
 \end{itemize}
 
 \section{Problem Statement}
-Citizens in a tier-2/3 Indian city face delays and uncertainty when reporting local issues (e.g., streetlight outages, water leakage, garbage accumulation, road potholes). Common pain points include:
+Patients visiting a hospital OPD are typically given a numbered token, but the token communicates only queue position, not time. A patient holding token 47 has no way of knowing whether their turn is 15 minutes or two hours away. Common pain points include:
 \begin{itemize}[leftmargin=0.7cm]
-    \item \textbf{Fragmentation:} complaints are often made via multiple channels (calls, social media, paper forms), causing lost context.
-    \item \textbf{Low transparency:} citizens cannot easily see the status of their complaint (e.g., ``received'', ``assigned'', ``in progress'', ``resolved'').
-    \item \textbf{Slow coordination:} departments/field teams lack a unified, trackable workflow with clear ownership.
-    \item \textbf{Poor data quality:} duplicate or incomplete reports force rework and extend resolution time.
+    \item \textbf{No wait-time visibility:} patients must physically wait near the counter for the entire duration, since the token gives no time estimate.
+    \item \textbf{Static queue tracking:} paper tokens and simple display boards do not adjust to a doctor running early or late.
+    \item \textbf{No cross-role visibility:} doctors and administrative staff have no simple digital view of the queue state, who is next, or how long consultations are taking.
+    \item \textbf{Poor no-show handling:} a patient who is not present when called blocks or disrupts the queue rather than being skipped cleanly.
 \end{itemize}
 
-\textbf{Why this matters now (contextual relevance):} In an urban setting with limited staff bandwidth, even small process improvements can noticeably reduce resolution delays and repeated submissions.
+\textbf{Why this matters now (contextual relevance):} In OPDs handling dozens of walk-in patients per doctor per day, even a simple, accurate wait estimate measurably reduces overcrowding in waiting areas and patient frustration, without requiring any change to how patients physically queue.
 
 \section{Proposed Solution %
 \BvrHint{\ldots Software Proposition}}
 \subsection{Overview}
-Build a \textbf{web-based} ``Grievance-to-Resolution'' system with the following components:
+Build a \textbf{web-based} ``Smart Hospital Queue Optimizer'' with the following components:
 \begin{itemize}[leftmargin=0.7cm]
-    \item \textbf{Citizen submission portal:} users submit an issue with photo (optional), category, and locality/ward.
-    \item \textbf{Automated triage:} basic duplicate detection and completeness checks.
-    \item \textbf{Department workflow:} assign issues to relevant department/team and update statuses.
-    \item \textbf{Status transparency:} citizens track status and receive notifications when resolved.
-    \item \textbf{Admin/ops dashboard:} performance summaries (resolution time, backlog).
+    \item \textbf{Patient portal:} register, select a department/doctor, and receive a digital token.
+    \item \textbf{Live wait estimation:} continuously updated estimate based on patients ahead and average consultation time.
+    \item \textbf{Doctor workflow:} call next, mark in-progress, complete, or skip a token.
+    \item \textbf{Status transparency:} patients track queue position and estimated wait in real time.
+    \item \textbf{Admin/ops dashboard:} manage doctors and departments, monitor all active queues.
 \end{itemize}
 
 \subsection{Core workflow}
 \begin{enumerate}[leftmargin=0.7cm]
-    \item Citizen creates a complaint and receives a complaint ID immediately.
-    \item System validates completeness and suggests possible duplicates (lightweight similarity on text/category and approximate location).
-    \item Department staff update status (Received $\rightarrow$ Assigned $\rightarrow$ In Progress $\rightarrow$ Resolved).
-    \item Citizen views status updates and resolution notes.
+    \item Patient registers and receives a token number immediately.
+    \item System computes estimated wait as patients ahead $\times$ average consultation time for that doctor.
+    \item Doctor calls the next patient, updating the currently-served token; all downstream wait estimates update accordingly.
+    \item Patient views live status until called, or receives a notification as their turn approaches.
 \end{enumerate}
 
-\subsection{Operational constraints for an educational, tier-2/3 setting}
+\subsection{Operational constraints for an educational, hospital-deployment setting}
 \begin{itemize}[leftmargin=0.7cm]
-    \item Keep the solution usable on low-to-mid range devices via responsive web design.
-    \item Avoid dependence on advanced research algorithms; focus on workflow, automation, and system correctness.
-    \item Design for deployability using common web hosting and managed databases.
+    \item Keep the solution usable on low-to-mid range devices via a responsive web frontend.
+    \item Avoid dependence on advanced predictive algorithms initially; focus on a correct, explainable workflow and formula before optimizing further.
+    \item Design for deployability using common web hosting and a managed relational database.
 \end{itemize}
 
 \section{Solution Approach %
 \BvrHint{\ldots Engineering focus}}
-This is an engineering course project, so we focus on scalable administrative and workflow aspects rather than novel algorithm research.
+This is an engineering course project, so we focus on scalable, real-time system design and correctness rather than novel algorithm research.
 
-\subsection{Duplicate/quality assistance %
+\subsection{Wait-time estimation %
 \BvrHint{\ldots non-research}}
-Duplicate detection will be heuristic-based:
+Wait-time estimation will be formula-based, not predictive/ML-based:
 \begin{itemize}[leftmargin=0.7cm]
-    \item Normalize text (category + short description keywords).
-    \item Use a simple similarity measure (e.g., token overlap / TF-IDF cosine with threshold) without claiming state-of-the-art.
-    \item Show top candidate duplicates to staff for decision; never fully auto-delete or auto-reject.
+    \item Estimated Wait (minutes) = Patients Ahead $\times$ Average Consultation Time.
+    \item Patients Ahead is computed as the difference between a patient's token number and the token currently being served.
+    \item The formula is intentionally simple in the first iteration, without claiming predictive sophistication; later iterations may refine the average using actual completed-consultation durations.
 \end{itemize}
 
-\subsection{Web architecture %
+\subsection{Web and system architecture %
 \BvrHint{\ldots web-based solution}}
-A typical 3-tier web architecture:
+A layered, real-time-capable web architecture:
 \begin{itemize}[leftmargin=0.7cm]
-    \item \textbf{Frontend:} responsive UI for citizens and staff (status pages, submission form, dashboard).
-    \item \textbf{Backend API:} authentication, complaint submission, status transitions, assignment logic.
-    \item \textbf{Database:} store users, complaints, status history, attachments metadata.
+    \item \textbf{Frontend:} responsive UI for patients, doctors, and admins (token view, queue dashboard, live wait display).
+    \item \textbf{Backend API:} Java/Spring Boot REST APIs for authentication, token generation, and queue state transitions.
+    \item \textbf{Database:} PostgreSQL storing doctors, departments, tokens, and consultation history.
+    \item \textbf{Real-time layer:} WebSockets to push queue updates to connected clients without polling.
 \end{itemize}
 
 \subsection{CI/CD and fast delivery enabler}
 CI/CD will be used to:
 \begin{itemize}[leftmargin=0.7cm]
-    \item Automatically build and run tests on every change.
-    \item Produce repeatable deployment artifacts to staging.
-    \item Enable safe and frequent releases of incremental features.
+    \item Automatically build and run tests (JUnit/Mockito) on every change.
+    \item Produce repeatable, containerized (Docker) deployment artifacts to staging.
+    \item Enable safe and frequent releases of incremental features across the four-week timeline.
 \end{itemize}
 
 \section{Evaluation Criterion %
@@ -154,25 +145,25 @@ CI/CD will be used to:
 We define success using measurable metrics tied to the core workflow.
 
 \subsection{Primary evaluation metric}
-\textbf{Time-to-acknowledgement (TTA):} time between complaint submission and ``Received/Assigned'' status creation in the system.
+\textbf{Wait-estimate accuracy:} the difference between the system's estimated wait time for a token and the token's actual observed wait time.
 \begin{itemize}[leftmargin=0.7cm]
-    \item Target: median TTA $\le$ 2 hours during pilot window.
-    \item Attribution: measured from database timestamps (submission vs. first status update by staff).
+    \item Target: estimate within $\pm$5 minutes of actual wait during pilot testing, for a fixed average-consultation-time doctor.
+    \item Attribution: measured from database timestamps (token creation, estimate at creation, actual call time).
 \end{itemize}
 
 \subsection{Secondary evaluation metrics}
 \begin{itemize}[leftmargin=0.7cm]
-    \item \textbf{Resolution time reduction:} reduce time-to-resolved compared to baseline process (even if baseline is collected via survey).
-    \item \textbf{Duplicate rate:} percentage of complaints flagged as duplicates and resolved without rework.
-    \item \textbf{User clarity:} citizen-reported clarity of status using a simple 1--5 feedback question.
-    \item \textbf{Reliability:} availability of staging/production for login and submission during business hours (e.g., $\ge$ 99\% uptime in pilot).
+    \item \textbf{Queue update latency:} time between a doctor calling ``next'' and the patient's client reflecting the new position (via WebSocket).
+    \item \textbf{No-show handling correctness:} percentage of skipped tokens correctly removed from the active queue without blocking downstream patients.
+    \item \textbf{User clarity:} patient-reported clarity of the wait estimate using a simple 1--5 feedback question.
+    \item \textbf{Reliability:} API and WebSocket availability during simulated OPD hours (e.g., $\ge$ 99\% uptime in pilot).
 \end{itemize}
 
 \subsection{Pilot validation plan %
 \BvrHint{\ldots high-level}}
 \begin{itemize}[leftmargin=0.7cm]
-    \item Recruit 10--20 pilot users (citizens) and 3--5 staff roles (department simulation if real staff unavailable).
-    \item Compare metrics before/after within the iteration window by logging baseline estimates via short interviews or existing process observations.
+    \item Simulate 10--20 patient token generations and 2--3 doctor sessions using seeded test data.
+    \item Compare system-estimated wait against actual simulated call times to validate the formula's accuracy before layering in authentication and real-time updates.
 \end{itemize}
 
 \section{Scalability %
@@ -180,63 +171,65 @@ We define success using measurable metrics tied to the core workflow.
 The proposition should scale in both theoretical and practical senses.
 
 \begin{enumerate}[leftmargin=0.7cm]
-    \item \textbf{Scalable (theoretically):} The system should support growth in number of complaints and concurrent dashboard usage by:
+    \item \textbf{Scalable (theoretically):} The system should support growth in number of doctors, departments, and concurrent patient connections by:
     \begin{itemize}[leftmargin=0.7cm]
-        \item decoupling components (frontend/backend),
-        \item enabling pagination and indexing for common queries,
-        \item using stateless API design.
+        \item decoupling frontend and backend via REST/WebSocket APIs,
+        \item indexing queue queries by doctor/department for fast lookups,
+        \item using a stateless REST API design, with real-time state held in Redis rather than in application memory.
     \end{itemize}
     
     \item \textbf{Operationally deployable (practically):} The system should run on common web hosting:
     \begin{itemize}[leftmargin=0.7cm]
-        \item managed database,
-        \item containerized or platform-hosted deployment,
-        \item CI/CD pipeline for staging/production.
+        \item managed PostgreSQL database,
+        \item containerized (Docker) deployment,
+        \item CI/CD pipeline for staging/production releases.
     \end{itemize}
 \end{enumerate}
 
 \section{Engine availability heuristic}
 A mature set of ``engines'' (tooling/services) is available to implement this as a web-based project:
 \begin{itemize}[leftmargin=0.7cm]
-    \item Web framework for REST APIs and templated/reactive pages.
-    \item Managed relational or document database.
-    \item Authentication approach (token-based or session-based).
-    \item Object storage for optional attachments (or local storage for pilot).
-    \item Test framework for unit/integration tests.
-    \item CI runner and staging deployment target.
+    \item Spring Boot for REST APIs and dependency-injected service architecture.
+    \item Spring Data JPA for ORM-backed persistence without hand-written SQL.
+    \item Managed relational database (PostgreSQL).
+    \item Spring Security with JWT for token-based, role-based authentication.
+    \item WebSocket support built into Spring for real-time push updates.
+    \item Redis for fast-changing active-queue state.
+    \item JUnit/Mockito for unit and integration testing.
+    \item Docker and free-tier cloud hosts (Render/Railway) for staging deployment.
 \end{itemize}
-We will use these mature components to focus on workflow design, correctness, and measurement rather than inventing new infrastructure.
+We will use these mature components to focus on queue-workflow design, correctness, and measurement rather than inventing new infrastructure.
 
 \section{Project scope and deliverables %
 \BvrHint{\ldots iteration-friendly}}
 \subsection{Initial deliverable %
 \BvrHint{\ldots first iteration}}
 \begin{itemize}[leftmargin=0.7cm]
-    \item Citizen submission form + complaint ID generation
-    \item Staff workflow: update status and assignment
-    \item Citizen status page: view timeline/history
-    \item Basic logging and timestamps for TTA measurement
-    \item CI: build + backend unit tests + linting
-    \item CD to staging with a single command or pipeline job
+    \item Doctor and Token entities, with repository/service/controller layers.
+    \item Token generation and queue-listing REST APIs, backed by H2 for development.
+    \item Wait-time estimation endpoint implementing the core formula.
+    \item Basic logging and timestamps to support wait-estimate accuracy measurement.
+    \item CI: build + backend unit tests.
 \end{itemize}
 
 \subsection{Subsequent deliverables}
 \begin{itemize}[leftmargin=0.7cm]
-    \item Lightweight duplicate suggestions with staff review
-    \item Notification layer (email/SMS optional in later iteration; can start with in-app notifications)
-    \item Admin dashboard for metrics and backlog
-    \item Improved search/filtering and indexed queries for scale readiness
+    \item Full queue lifecycle: call-next, complete, skip; migration to PostgreSQL.
+    \item JWT-based authentication and role-based access for patient/doctor/admin.
+    \item WebSocket integration for live queue updates on the frontend.
+    \item Admin dashboard for managing doctors/departments and monitoring queues.
+    \item Docker containerization and deployment to a staging/production host.
 \end{itemize}
 
 \section{Risks and mitigations}
 \begin{itemize}[leftmargin=0.7cm]
-    \item \textbf{Data privacy / consent:} minimize collected data; keep attachments optional; store only what is needed.
-    \item \textbf{Staff adoption:} provide an easy UI for status updates; keep workflow steps minimal; include shortcuts.
-    \item \textbf{Evaluation measurement ambiguity:} instrument timestamps and define clear status transitions before development begins.
-    \item \textbf{Operational issues in pilot:} use staging early; ensure CI/CD produces repeatable deployments.
+    \item \textbf{Data privacy:} minimize collected patient data; store only what is required for queue operation (name, token, department).
+    \item \textbf{Staff adoption:} keep the doctor-facing ``call next / complete / skip'' interface to single-click actions to minimize workflow disruption.
+    \item \textbf{Estimate accuracy drift:} instrument actual consultation durations from day one so the fixed-average formula can later be replaced with a measured average.
+    \item \textbf{Real-time reliability:} fall back to periodic polling if a WebSocket connection drops, so the patient view never silently goes stale.
 \end{itemize}
 
 \section{Summary}
-This project proposes a deployable web platform to reduce grievance handling delays in a tier-2/3 city context. It meets the course criteria by emphasizing time-to-value through rapid iterations, implementing CI/CD to support frequent safe releases, and using measurable evaluation criteria (especially time-to-acknowledgement). It remains focused on engineering workflow and scalability readiness rather than research-driven novelty.
+This project proposes a deployable, real-time web platform to close the gap between a static hospital queue token and a patient's actual need to know how long they will wait. It meets the course criteria by emphasizing time-to-value through weekly, independently demonstrable iterations, implementing CI/CD to support frequent safe releases, and using measurable evaluation criteria (wait-estimate accuracy and queue update latency). It remains focused on engineering workflow, real-time system design, and scalability readiness rather than research-driven novelty.
 
 \end{document}
