@@ -1,1 +1,180 @@
 ../journals
+# Sprint 1 Journal — Project Setup & Core Backend
+
+## Objective
+
+Set up the Smart Hospital Queue Optimizer and establish the core backend
+architecture.
+
+## Work Completed
+
+- Created the Spring Boot project.
+- Configured the Maven dependencies.
+- Established the backend package structure.
+- Implemented the Doctor entity.
+- Implemented the Department entity.
+- Implemented the User entity.
+- Implemented the Token entity.
+- Created the initial repositories, services, and controllers.
+- Created and tested the basic REST API structure.
+
+## Challenges
+
+Initially, the main challenge was organizing the backend structure so that
+entities, repositories, services, and controllers remained separated and
+easy to maintain.
+
+## Resolution
+
+The backend was organized into separate layers, allowing database access,
+business logic, and API handling to remain independent.
+
+## Outcome
+
+The core Spring Boot backend was successfully established and the main
+entities required for hospital queue management were implemented.
+
+## Next Steps
+
+The next sprint focused on implementing the complete token and queue
+lifecycle.
+
+
+# Sprint 2 Journal — Queue Management
+
+## Objective
+
+The main objective of Sprint 2 was to implement the core hospital queue
+management functionality and establish the complete lifecycle of a patient
+token.
+
+## Work Completed
+
+- Implemented token creation and management.
+- Connected tokens with the appropriate doctor and department.
+- Implemented queue ordering and management.
+- Added different token/queue states.
+- Implemented the complete queue lifecycle from token creation to completion.
+- Added backend APIs for performing queue-related operations.
+- Tested the queue operations through the backend.
+
+## Technical Work
+
+The queue management functionality was implemented in the Spring Boot
+backend. The Token entity was integrated with the other core entities so
+that tokens could be associated with doctors and departments.
+
+The queue was designed to maintain patients in their appropriate order.
+Tokens can move through the required stages of the queue lifecycle, allowing
+the system to track the current state of each patient.
+
+## Challenges Faced
+
+One of the main challenges was ensuring that token states and queue ordering
+were handled correctly during different queue operations.
+
+Another challenge was maintaining the relationship between tokens, doctors,
+and departments while performing queue operations.
+
+## Solution
+
+The queue operations were implemented through separate backend services and
+REST APIs. The queue state was updated whenever an operation was performed,
+allowing the system to maintain the current status of each token.
+
+## Outcome
+
+By the end of Sprint 2, the system had a functional queue management
+component with a complete token lifecycle.
+
+The backend could create and manage tokens and process patients through the
+hospital queue.
+
+## Next Sprint
+
+The next sprint focused on implementing formula-based waiting-time
+estimation and integrating PostgreSQL for permanent data persistence.
+
+
+# Sprint 3 Journal — PostgreSQL & Waiting-Time Estimation
+
+## Objective
+
+The main objective of Sprint 3 was to implement the waiting-time estimation
+functionality and replace temporary data storage with persistent PostgreSQL
+storage.
+
+## Work Completed
+
+- Implemented formula-based waiting-time estimation.
+- Integrated waiting-time calculation with the active queue.
+- Configured PostgreSQL as the project database.
+- Connected the Spring Boot application to PostgreSQL.
+- Persisted users, doctors, departments, and tokens in the database.
+- Tested database operations.
+- Verified that data remains available after application restarts.
+
+## Waiting-Time Estimation
+
+The system uses a simple formula-based approach rather than a machine
+learning model.
+
+The estimated waiting time is calculated using:
+
+**Estimated Wait Time = Patients Ahead × Average Consultation Time**
+
+The number of active patients ahead of a patient is determined from the
+current queue, and the average consultation time is used to estimate the
+patient's expected waiting period.
+
+## Database Implementation
+
+PostgreSQL was integrated with the Spring Boot backend to provide permanent
+data persistence.
+
+Previously, application data could be lost when the application was
+restarted. After integrating PostgreSQL, important application data is
+stored in the database and remains available after restarts.
+
+## Challenges Faced
+
+The main challenges were configuring the PostgreSQL connection correctly and
+ensuring that the application entities and queue operations worked correctly
+with persistent database storage.
+
+Another challenge was making sure that the waiting-time calculation used
+the current queue state rather than static or temporary information.
+
+## Solution
+
+The Spring Boot application was configured to communicate with PostgreSQL,
+and the existing entities were connected to persistent database storage.
+
+The waiting-time calculation was integrated with the queue so that the
+estimated waiting time could be calculated based on the patients currently
+ahead in the queue.
+
+## Testing
+
+The team tested:
+
+- Token creation.
+- Queue operations.
+- Database insertion and retrieval.
+- Waiting-time calculation.
+- Data persistence after application restart.
+- Interaction between queue management and waiting-time estimation.
+
+## Outcome
+
+By the end of Sprint 3, PostgreSQL persistence was successfully implemented
+and the application data survived restarts.
+
+The waiting-time estimation functionality was also integrated with the
+queue, providing an estimated waiting time based on the number of patients
+ahead and the average consultation time.
+
+## Next Sprint
+
+The next sprint focused on implementing user authentication, password
+hashing, JWT-based login, and authorization.
