@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Hospital Queue Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- SockJS & STOMP scripts for Real-Time WebSockets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <style>
+        :root {
+            --ink:#0F2438;
+            --ink-soft:#475569;
+            --bg:#0b1320;
+            --panel:#FFFFFF;
+            --panel-translucent: rgba(255, 255, 255, 0.94);
+            --teal:#0E7C7B;
+            --teal-deep:#0A5958;
+            --amber:#F2A93B;
+            --coral:#E2574C;
+            --line:#E2E8F0;
+        }
+
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:'Inter',sans-serif; background: var(--bg); color:var(--ink); min-height:100vh; }
+        h1,h2,h3,h4 { font-family:'Space Grotesk',sans-serif; }
+
+        .hero-wrapper {
+            min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(180deg, rgba(15, 36, 56, 0.45) 0%, rgba(11, 19, 32, 0.85) 100%),
+            url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3?q=80&w=2000&auto=format&fit=crop');
+            background-size: cover; background-position: center; background-attachment: fixed; padding: 24px;
+        }
+
+        .auth-card {
+            background: var(--panel-translucent); backdrop-filter: blur(16px); border-radius: 24px;
+            padding: 40px 36px; width: 100%; max-width: 480px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2);
+            text-align: center; transition: all 0.3s ease;
+        }
+        .auth-card-wide { max-width: 640px; }
+
+        .brand-logo {
+            width: 54px; height: 54px; background: var(--teal); color: #fff; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700;
+            margin: 0 auto 16px auto; box-shadow: 0 8px 16px rgba(14, 124, 123, 0.3);
+        }
+        .card-subtitle { color: var(--ink-soft); font-size: 14px; margin-top: 6px; margin-bottom: 24px; }
+
+        .btn-google {
+            width: 100%; background: #D92525; color: #FFFFFF; font-weight: 600; font-size: 15px;
+            padding: 13px 20px; border-radius: 12px; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 12px;
+            box-shadow: 0 4px 12px rgba(217, 37, 37, 0.3); transition: transform 0.15s ease, background 0.15s ease;
+        }
+        .btn-google:hover { background: #B91C1C; transform: translateY(-1px); }
+        .btn-google svg { width: 22px; height: 22px; background: #fff; border-radius: 50%; padding: 2px; }
+
+        .divider { display: flex; align-items: center; text-align: center; margin: 20px 0; color: var(--ink-soft); font-size: 12px; font-weight: 600; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--line); }
+        .divider span { padding: 0 10px; }
+
+        .field { margin-bottom: 14px; text-align: left; }
+        .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+        .field input, .field select, .field textarea {
+            width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--line);
+            font-family: 'Inter', sans-serif; font-size: 13.5px; background: #FFFFFF; transition: border-color 0.2s;
+        }
+        .field input:focus, .field select:focus { outline: none; border-color: var(--teal); }
+        textarea { resize: vertical; min-height: 60px; }
+
+        .btn { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px; padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; color: #fff; }
+        .btn-primary { background: var(--ink); }
+        .btn-teal { background: var(--teal); }
+        .btn-amber { background: var(--amber); color: var(--ink); }
+        .btn-coral { background: var(--coral); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-full { width: 100%; }
+
+        .staff-toggle-btn {
+            width: 100%; text-align: left; padding: 12px 16px; background: #F8FAFC; border: 1px solid var(--line);
+            border-radius: 10px; font-weight: 600; font-size: 13.5px; cursor: pointer; color: var(--ink);
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        }
+        .staff-toggle-btn:hover { background: #F1F5F9; }
+        .staff-panel { display: none; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #FFFFFF; margin-bottom: 14px; }
+
+        .status-pill { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 100px; text-transform: uppercase; }
+        .status-WAITING { background: #EAF0F3; color: var(--ink-soft); }
+        .status-IN_PROGRESS { background: rgba(242,169,59,0.18); color: #8A5A0E; }
+        .status-DONE { background: rgba(14,124,123,0.14); color: var(--teal-deep); }
+        .status-SKIPPED { background: rgba(226,87,76,0.14); color: var(--coral); }
+
+        .token-card { background: #10283A; border-radius: 14px; padding: 26px; text-align: center; color: #fff; margin-top: 16px; }
+        .token-card .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: #8FB3C0; text-transform: uppercase; }
+        .token-card .big { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; color: var(--amber); margin: 6px 0; }
+        .token-card .sub { font-size: 13px; color: #B9CFD8; }
+
+        .doc-info-box { background: #F0F7F7; border: 1px solid #D1E5E5; border-radius: 10px; padding: 16px; margin: 16px 0; font-size: 13px; color: var(--ink); text-align: left; }
+        .doc-info-box h4 { color: var(--teal-deep); margin-bottom: 8px; font-size: 15px; }
+
+        .msg { margin-top: 12px; padding: 12px 14px; border-radius: 8px; font-size: 13.5px; text-align: left; }
+        .msg-ok { background: rgba(14,124,123,0.1); color: var(--teal-deep); border: 1px solid rgba(14,124,123,0.25); }
+        .msg-err { background: rgba(226,87,76,0.1); color: #9C2E26; border: 1px solid rgba(226,87,76,0.25); }
+
+        .card { background:#FFFFFF; border:1px solid var(--line); border-radius:14px; padding:24px; margin-bottom:20px; }
+        .card h3 { font-size:18px; margin-bottom:16px; color:var(--ink); }
+
+        .list-row { display: flex; align-items: center; justify-content: space-between; background: #F8FAFC; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+        .list-row .name { font-weight: 600; }
+        .list-row .meta { color: var(--ink-soft); font-size: 12px; }
+
+        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .tab-link { color: var(--teal); font-weight: 600; cursor: pointer; text-decoration: underline; font-size: 13px; }
+        .footer-text { font-size: 11.5px; color: var(--ink-soft); margin-top: 24px; }
+    </style>
+</head>
+<body>
+
+<!-- LANDING / AUTHENTICATION HERO SCREEN -->
+<div id="auth-screen" class="hero-wrapper">
+
+    <!-- MAIN SIGN IN CARD -->
+    <div class="auth-card" id="main-auth-card">
+        <div class="brand-logo">+</div>
+        <h2 style="font-size:24px;">Smart Hospital</h2>
+        <p class="card-subtitle">Sign in to manage consultations and live queue tokens</p>
+
+        <!-- GOOGLE OAUTH SIGN IN BUTTON -->
+        <button class="btn-google" onclick="loginWithGoogle()">
+            <svg viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            Sign in with Google
+        </button>
+
+        <div class="divider"><span>OR PATIENT CREDENTIALS</span></div>
+
+        <!-- PATIENT LOGIN -->
+        <div id="patient-login-subform">
+            <div class="field"><label>Username</label><input id="patient-username" placeholder="Enter patient username"></div>
+            <div class="field"><label>Password</label><input id="patient-password" type="password" placeholder="Enter password"></div>
+            <button class="btn btn-teal btn-full" onclick="loginDirect('patient-username', 'patient-password')">Patient Sign In</button>
+            <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:13px;">
+                <span class="tab-link" onclick="openRegistrationModal()">New patient? Register</span>
+                <span class="tab-link" onclick="openForgotPasswordModal()" style="color:var(--ink-soft);">Forgot password?</span>
+            </div>
+        </div>
+
+        <div class="divider"><span>STAFF ACCESS</span></div>
+
+        <!-- COLLAPSED STAFF PORTALS -->
+        <button class="staff-toggle-btn" onclick="toggleStaffPanel('doc-panel')">
+            <span>👨‍⚕️ Doctor Login</span>
+            <span id="doc-panel-icon">▼</span>
+        </button>
+        <div id="doc-panel" class="staff-panel">
+            <div class="field"><label>Doctor Username</label><input id="doc-login-user" placeholder="Doctor username"></div>
+            <div class="field"><label>Password</label><input id="doc-login-pass" type="password" placeholder="Password"></div>
+            <button class="btn btn-primary btn-full" onclick="loginDirect('doc-login-user', 'doc-login-pass')">Doctor Log In</button>
+        </div>
+
+        <button class="staff-toggle-btn" onclick="toggleStaffPanel('admin-panel')">
+            <span>🔐 Admin Login</span>
+            <span id="admin-panel-icon">▼</span>
+        </button>
+        <div id="admin-panel" class="staff-panel">
+            <div class="field"><label>Admin Username</label><input id="admin-login-user" placeholder="Admin username"></div>
+            <div class="field"><label>Password</label><input id="admin-login-pass" type="password" placeholder="Password"></div>
+            <button class="btn btn-amber btn-full" onclick="loginDirect('admin-login-user', 'admin-login-pass')">Admin Log In</button>
+        </div>
+
+        <p class="footer-text">Smart Hospital Queue Optimizer System</p>
+    </div>
+
+    <!-- PATIENT EXPANDED REGISTRATION CARD -->
+    <div class="auth-card auth-card-wide" id="patient-reg-card" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3>Patient Registration</h3>
+            <span class="tab-link" onclick="closeRegistrationModal()">← Back to Sign In</span>
+        </div>
+
+        <div class="field"><label>Full Name</label><input id="reg-fullname" placeholder="John Doe"></div>
+
+        <div class="row2">
+            <div class="field"><label>Date of Birth</label><input id="reg-dob" type="date"></div>
+            <div class="field">
+                <label>Gender</label>
+                <select id="reg-gender">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row2">
+            <div class="field"><label>Blood Group</label><input id="reg-blood" placeholder="e.g. O+"></div>
+            <div class="field"><label>Phone Number</label><input id="reg-phone" placeholder="10-digit number"></div>
+        </div>
+
+        <div class="field"><label>Email Address</label><input id="reg-email" type="email" placeholder="john@example.com"></div>
+        <div class="field"><label>Address</label><input id="reg-address" placeholder="Street address"></div>
+
+        <div class="row2">
+            <div class="field"><label>Emergency Contact Name</label><input id="reg-emname" placeholder="Contact person"></div>
+            <div class="field"><label>Emergency Phone</label><input id="reg-emphone" placeholder="Emergency phone"></div>
+        </div>
+
+        <div class="field"><label>Medical Conditions</label><textarea id="reg-conditions" placeholder="e.g. Diabetes, Hypertension"></textarea></div>
+        <div class="field"><label>Allergies</label><textarea id="reg-allergies" placeholder="e.g. Penicillin, Peanuts"></textarea></div>
+
+        <hr style="border:0; border-top:1px solid var(--line); margin:20px 0;">
+
+        <div class="field"><label>Account Username</label><input id="reg-username" placeholder="Choose a username"></div>
+        <div class="row2">
+            <div class="field"><label>Password</label><input id="reg-password" type="password" placeholder="Set password"></div>
+            <div class="field"><label>Confirm Password</label><input id="reg-confirm" type="password" placeholder="Confirm password"></div>
+        </div>
+
+        <button class="btn btn-teal btn-full" onclick="registerPatient()">Register Patient</button>
+        <div id="out-reg" class="msg" style="display:none;"></div>
+    </div>
+
+    <!-- FORGOT PASSWORD MODAL -->
+    <div class="auth-card" id="patient-forgot-card" style="display:none; max-width:440px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3>Reset Password</h3>
+            <span class="tab-link" onclick="closeForgotPasswordModal()">← Back</span>
+        </div>
+        <p class="card-subtitle" style="text-align:left; margin-bottom:16px;">Enter your registered email address and we will send you a secure password reset link.</p>
+
+        <div class="field">
+            <label>Email Address</label>
+            <input id="forgot-email" type="email" placeholder="john@example.com">
+        </div>
+
+        <button class="btn btn-teal btn-full" onclick="sendPasswordResetLink()">Send Reset Link</button>
+        <div id="out-forgot" class="msg" style="display:none;"></div>
+    </div>
+
+</div>
+
+<!-- MAIN DASHBOARD SCREEN (POST-LOGIN) -->
+<div id="dashboard-screen" style="display:none; background:#F4F7F7;">
+    <div style="display:flex; min-height:100vh;">
+        <div style="width:220px; background:var(--ink); color:#fff; padding:24px 16px; flex-shrink:0;">
+            <div style="font-weight:700; font-size:16px; margin-bottom:32px;">Queue Optimizer</div>
+            <div id="tab-patient-btn" onclick="showTab('patient')" style="padding:10px 12px; border-radius:8px; margin-bottom:6px; cursor:pointer;">Patient View</div>
+            <div id="tab-doctor-btn" onclick="showTab('doctor')" style="padding:10px 12px; border-radius:8px; margin-bottom:6px; cursor:pointer;">Doctor View</div>
+            <div id="tab-admin-btn" onclick="showTab('admin')" style="padding:10px 12px; border-radius:8px; margin-bottom:6px; cursor:pointer;">Admin View</div>
+            <div onclick="logout()" style="padding:10px 12px; border-radius:8px; margin-top:24px; cursor:pointer; border:1px solid rgba(255,255,255,0.2);">Log out</div>
+        </div>
+
+        <div style="flex:1; padding:32px; max-width:860px;">
+            <!-- PATIENT TAB -->
+            <div id="tab-patient" class="tab-panel">
+                <h2 style="margin-bottom:20px;">Patient Dashboard</h2>
+                <div class="card">
+                    <h3>Get your token</h3>
+                    <div class="row2">
+                        <div class="field">
+                            <label>Department</label>
+                            <select id="tok-dept-select" onchange="onDeptChange()"><option value="">Loading departments...</option></select>
+                        </div>
+                        <div class="field">
+                            <label>Doctor</label>
+                            <select id="tok-doctor-select" onchange="onDoctorSelectChange()"><option value="">Select a department first</option></select>
+                        </div>
+                    </div>
+
+                    <!-- DOCTOR DETAILS BOX -->
+                    <div id="doctor-details-box" class="doc-info-box" style="display:none;">
+                        <h4 id="doc-info-name">—</h4>
+                        <div><strong>Qualification:</strong> <span id="doc-info-qual">—</span></div>
+                        <div><strong>Experience:</strong> <span id="doc-info-exp">—</span> years</div>
+                        <div><strong>Visiting Days:</strong> <span id="doc-info-days">—</span></div>
+                        <div style="margin-bottom:12px;"><strong>Operating Hours:</strong> <span id="doc-info-slots">—</span></div>
+
+                        <div class="field">
+                            <label style="color:var(--teal-deep);">Select Preferred Visit Shift / Slot</label>
+                            <select id="patient-slot-select">
+                                <option value="Morning Shift (9:00 AM - 1:00 PM)">Morning Shift (9:00 AM - 1:00 PM)</option>
+                                <option value="Evening Shift (3:00 PM - 8:00 PM)">Evening Shift (3:00 PM - 8:00 PM)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-teal" onclick="generateToken()">Get my token</button>
+                    <div id="out-token" class="msg" style="display:none;"></div>
+
+                    <div id="token-result" style="display:none;" class="token-card">
+                        <div class="label">Your Generated Token</div>
+                        <div class="big" id="token-number-display">—</div>
+                        <div id="token-slot-display" style="color:var(--amber); font-weight:600; font-size:14px; margin-bottom:4px;">Shift: —</div>
+                        <div class="sub" id="token-wait-display">Checking estimated wait time...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DOCTOR TAB -->
+            <div id="tab-doctor" class="tab-panel" style="display:none;">
+                <h2 style="margin-bottom:20px;">Doctor Management Dashboard</h2>
+                <div class="card">
+                    <h3>Select your queue</h3>
+                    <div class="field">
+                        <label>Doctor</label>
+                        <select id="q-doc-select" onchange="onDoctorQueueSelect()"><option value="">Loading doctors...</option></select>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="callNext()">Call next patient</button>
+                    <div id="out-queue-action" class="msg" style="display:none;"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Current queue (Live Updates Connected) <button class="btn btn-primary btn-sm" style="float:right;" onclick="loadQueue()">Refresh</button></h3>
+                    <div id="queue-list"></div>
+                </div>
+            </div>
+
+            <!-- ADMIN TAB -->
+            <div id="tab-admin" class="tab-panel" style="display:none;">
+                <h2 style="margin-bottom:20px;">Admin Control Panel</h2>
+                <div class="card">
+                    <h3>Add a department</h3>
+                    <div class="field"><label>Name</label><input id="dept-name" placeholder="e.g. Cardiology"></div>
+                    <button class="btn btn-primary" onclick="addDepartment()">Add department</button>
+                    <div id="out-department" class="msg" style="display:none;"></div>
+                    <div id="department-list" style="margin-top:16px;"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Add a doctor</h3>
+                    <div class="row2">
+                        <div class="field"><label>Doctor Name</label><input id="doc-name" placeholder="e.g. Dr. Mehta"></div>
+                        <div class="field">
+                            <label>Department</label>
+                            <select id="doc-dept-select"><option value="">Loading departments...</option></select>
+                        </div>
+                    </div>
+
+                    <div class="row2">
+                        <div class="field"><label>Qualification</label><input id="doc-qual" placeholder="e.g. MBBS, MD (Cardiology)"></div>
+                        <div class="field"><label>Experience (Years)</label><input id="doc-exp" type="number" value="10"></div>
+                    </div>
+
+                    <div class="field">
+                        <label>Visiting Days</label>
+                        <select id="doc-days-select" onchange="handleVisitingDaysChange()">
+                            <option value="Monday - Saturday">Monday - Saturday</option>
+                            <option value="Monday - Friday">Monday - Friday</option>
+                            <option value="Monday, Wednesday, Friday">Monday, Wednesday, Friday</option>
+                            <option value="Tuesday, Thursday, Saturday">Tuesday, Thursday, Saturday</option>
+                            <option value="All Days (Mon - Sun)">All Days (Mon - Sun)</option>
+                            <option value="CUSTOM">Custom Schedule...</option>
+                        </select>
+                        <input id="doc-days-custom" placeholder="e.g. Mon, Wed, Sat" style="display:none; margin-top:6px;">
+                    </div>
+
+                    <div class="field">
+                        <label>Time Slots</label>
+                        <select id="doc-slots-select" onchange="handleTimeSlotsChange()">
+                            <option value="Mon-Fri: 9 AM - 1 PM, 3 PM - 8 PM | Sat: 9 AM - 1 PM">Mon-Fri: 9 AM - 1 PM, 3 PM - 8 PM | Sat: 9 AM - 1 PM</option>
+                            <option value="9:00 AM - 1:00 PM (Morning Shift)">9:00 AM - 1:00 PM (Morning Shift)</option>
+                            <option value="2:00 PM - 6:00 PM (Afternoon Shift)">2:00 PM - 6:00 PM (Afternoon Shift)</option>
+                            <option value="5:00 PM - 9:00 PM (Evening Shift)">5:00 PM - 9:00 PM (Evening Shift)</option>
+                            <option value="9:00 AM - 5:00 PM (Full Day)">9:00 AM - 5:00 PM (Full Day)</option>
+                            <option value="CUSTOM">Custom Time Slot...</option>
+                        </select>
+                        <input id="doc-slots-custom" placeholder="e.g. 10 AM - 2 PM, 6 PM - 9 PM" style="display:none; margin-top:6px;">
+                    </div>
+
+                    <div class="row2">
+                        <div class="field"><label>Doctor Username</label><input id="doc-username" placeholder="Login username"></div>
+                        <div class="field"><label>Doctor Password</label><input id="doc-password" type="password" placeholder="Set password"></div>
+                    </div>
+
+                    <div class="field"><label>Average consult time (minutes)</label><input id="doc-avg" type="number" value="8"></div>
+
+                    <button class="btn btn-primary" onclick="addDoctor()">Add doctor</button>
+                    <div id="out-doctor" class="msg" style="display:none;"></div>
+                    <div id="doctor-list" style="margin-top:16px;"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    let authToken = null;
+    let userRole = null;
+    let loggedInUsername = null;
+    let doctorListCache = [];
+    let stompClient = null;
+    let activeSubscription = null;
+
+    function base(){ return '/api'; }
+
+    function decodeToken(token){
+        try {
+            const payload = token.split('.')[1];
+            const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+            return JSON.parse(decoded);
+        } catch(e) {
+            return { role: 'PATIENT', sub: 'Google User' };
+        }
+    }
+
+    function connectWebSocket(doctorId) {
+        if (stompClient !== null && activeSubscription !== null) {
+            activeSubscription.unsubscribe();
+        }
+
+        const socket = new SockJS('/ws-queue');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect({}, function (frame) {
+            activeSubscription = stompClient.subscribe('/topic/queue/' + doctorId, function (messageOutput) {
+                const updatedQueue = JSON.parse(messageOutput.body);
+                renderQueueList(updatedQueue);
+            });
+        });
+    }
+
+    function renderQueueList(data) {
+        const list = document.getElementById('queue-list');
+        const doctorId = document.getElementById('q-doc-select').value;
+        list.innerHTML = '';
+        if(!data || data.length === 0){ list.innerHTML = '<div class="list-row">No patients in this queue yet.</div>'; return; }
+
+        data.forEach(t => {
+            const row = document.createElement('div');
+            row.className = 'list-row';
+            const actions = t.status === 'WAITING' || t.status === 'IN_PROGRESS'
+                ? '<button class="btn btn-teal btn-sm" onclick="completeToken(' + doctorId + ',' + t.tokenNumber + ')">Complete</button>' +
+                '<button class="btn btn-coral btn-sm" onclick="skipToken(' + doctorId + ',' + t.tokenNumber + ')">Skip</button>'
+                : '';
+            row.innerHTML =
+                '<span><span class="name">#' + t.tokenNumber + '</span> &nbsp; ' + t.patientName + '</span>' +
+                '<span><span class="status-pill status-' + t.status + '" style="margin-right:8px;">' + t.status + '</span>' + actions + '</span>';
+            list.appendChild(row);
+        });
+    }
+
+    function onDoctorQueueSelect() {
+        const doctorId = document.getElementById('q-doc-select').value;
+        if (doctorId) {
+            loadQueue();
+            connectWebSocket(doctorId);
+        }
+    }
+
+    function openRegistrationModal(){
+        document.getElementById('main-auth-card').style.display = 'none';
+        document.getElementById('patient-reg-card').style.display = 'block';
+    }
+
+    function closeRegistrationModal(){
+        document.getElementById('patient-reg-card').style.display = 'none';
+        document.getElementById('main-auth-card').style.display = 'block';
+    }
+
+    function openForgotPasswordModal(){
+        document.getElementById('main-auth-card').style.display = 'none';
+        document.getElementById('patient-forgot-card').style.display = 'block';
+    }
+
+    function closeForgotPasswordModal(){
+        document.getElementById('patient-forgot-card').style.display = 'none';
+        document.getElementById('main-auth-card').style.display = 'block';
+    }
+
+    function toggleStaffPanel(panelId){
+        const panel = document.getElementById(panelId);
+        const icon = document.getElementById(panelId + '-icon');
+        const isVisible = panel.style.display === 'block';
+
+        panel.style.display = isVisible ? 'none' : 'block';
+        icon.textContent = isVisible ? '▼' : '▲';
+    }
+
+    function loginWithGoogle(){
+        window.location.href = "/oauth2/authorization/google";
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('oauthSuccess') === 'true') {
+            authToken = "google_authenticated_session";
+            userRole = "PATIENT";
+            loggedInUsername = "Google User";
+
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('dashboard-screen').style.display = 'block';
+
+            applyRoleVisibility();
+        }
+    });
+
+    function handleVisitingDaysChange(){
+        const sel = document.getElementById('doc-days-select').value;
+        document.getElementById('doc-days-custom').style.display = (sel === 'CUSTOM') ? 'block' : 'none';
+    }
+
+    function handleTimeSlotsChange(){
+        const sel = document.getElementById('doc-slots-select').value;
+        document.getElementById('doc-slots-custom').style.display = (sel === 'CUSTOM') ? 'block' : 'none';
+    }
+
+    function showMsg(id, text, ok){
+        const el = document.getElementById(id);
+        el.style.display = 'block';
+        el.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
+        el.textContent = text;
+    }
+
+    function authHeaders(extra){
+        const h = { 'Authorization': 'Bearer ' + authToken };
+        return extra ? Object.assign(h, extra) : h;
+    }
+
+    async function registerPatient(){
+        const username = document.getElementById('reg-username').value.trim();
+        const password = document.getElementById('reg-password').value.trim();
+        const confirm = document.getElementById('reg-confirm').value.trim();
+
+        if(!username || !password){
+            showMsg('out-reg', 'Please choose a username and password.', false);
+            return;
+        }
+        if(password !== confirm){
+            showMsg('out-reg', 'Passwords do not match!', false);
+            return;
+        }
+
+        const payload = {
+            fullName: document.getElementById('reg-fullname').value,
+            dateOfBirth: document.getElementById('reg-dob').value,
+            gender: document.getElementById('reg-gender').value,
+            bloodGroup: document.getElementById('reg-blood').value,
+            phoneNumber: document.getElementById('reg-phone').value,
+            email: document.getElementById('reg-email').value,
+            address: document.getElementById('reg-address').value,
+            emergencyContactName: document.getElementById('reg-emname').value,
+            emergencyPhone: document.getElementById('reg-emphone').value,
+            medicalConditions: document.getElementById('reg-conditions').value,
+            allergies: document.getElementById('reg-allergies').value,
+            username: username,
+            password: password
+        };
+
+        try{
+            const res = await fetch(base() + '/auth/register/patient', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if(!res.ok) throw new Error('Registration failed or username already exists.');
+
+            showMsg('out-reg', 'Registration successful! Returning to Sign In...', true);
+            setTimeout(() => {
+                closeRegistrationModal();
+                document.getElementById('patient-username').value = username;
+            }, 1200);
+        }catch(e){
+            showMsg('out-reg', e.message, false);
+        }
+    }
+
+    async function sendPasswordResetLink(){
+        const email = document.getElementById('forgot-email').value.trim();
+        if(!email){
+            showMsg('out-forgot', 'Please enter your email address.', false);
+            return;
+        }
+
+        try {
+            const res = await fetch(base() + '/auth/forgot-password?email=' + encodeURIComponent(email), {
+                method: 'POST'
+            });
+
+            if(res.ok){
+                showMsg('out-forgot', 'Password reset instructions have been sent to your email.', true);
+                setTimeout(() => {
+                    closeForgotPasswordModal();
+                }, 3000);
+            } else {
+                throw new Error('Email address not found in system records.');
+            }
+        } catch(e) {
+            showMsg('out-forgot', e.message, false);
+        }
+    }
+
+    async function loginDirect(userInputId, passInputId){
+        const username = document.getElementById(userInputId).value.trim();
+        const password = document.getElementById(passInputId).value.trim();
+
+        if(!username || !password){
+            alert('Please enter both username and password');
+            return;
+        }
+
+        try{
+            const res = await fetch(base() + '/auth/login?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), { method: 'POST' });
+            if(!res.ok) throw new Error('Invalid username or password');
+
+            authToken = await res.text();
+            const claims = decodeToken(authToken);
+            userRole = claims.role;
+            loggedInUsername = claims.sub;
+
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('dashboard-screen').style.display = 'block';
+
+            applyRoleVisibility();
+        }catch(e){
+            alert(e.message);
+        }
+    }
+
+    function logout(){
+        if (stompClient !== null) stompClient.disconnect();
+        authToken = null; userRole = null; loggedInUsername = null;
+        document.getElementById('dashboard-screen').style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'flex';
+    }
+
+    function showTab(name){
+        document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+        document.getElementById('tab-' + name).style.display = 'block';
+        document.getElementById('tab-patient-btn').style.background = '';
+        document.getElementById('tab-doctor-btn').style.background = '';
+        document.getElementById('tab-admin-btn').style.background = '';
+        document.getElementById('tab-' + name + '-btn').style.background = 'var(--teal)';
+
+        if(name === 'patient') loadDepartments();
+        if(name === 'doctor') loadDoctorsIntoSelect('q-doc-select', true);
+        if(name === 'admin'){ loadDepartments(); loadDoctorsForAdmin(); }
+    }
+
+    function applyRoleVisibility(){
+        const show = (id, visible) => document.getElementById(id).style.display = visible ? 'block' : 'none';
+        show('tab-patient-btn', userRole === 'PATIENT');
+        show('tab-doctor-btn', userRole === 'DOCTOR');
+        show('tab-admin-btn', userRole === 'ADMIN');
+
+        if(userRole === 'PATIENT') showTab('patient');
+        else if(userRole === 'DOCTOR') showTab('doctor');
+        else if(userRole === 'ADMIN') showTab('admin');
+    }
+
+    async function loadDepartments(){
+        try{
+            const res = await fetch(base() + '/departments', { headers: authHeaders() });
+            const data = await res.json();
+
+            const fillSelect = (selectId, placeholder) => {
+                const sel = document.getElementById(selectId);
+                if(!sel) return;
+                sel.innerHTML = '<option value="">' + placeholder + '</option>';
+                data.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = d.name;
+                    sel.appendChild(opt);
+                });
+            };
+            fillSelect('tok-dept-select', 'Select a department');
+            fillSelect('doc-dept-select', 'Select a department');
+
+            const list = document.getElementById('department-list');
+            if(list){
+                list.innerHTML = '';
+                data.forEach(d => {
+                    const row = document.createElement('div');
+                    row.className = 'list-row';
+                    row.innerHTML = '<span class="name">' + d.name + '</span><span class="meta">ID ' + d.id + '</span>';
+                    list.appendChild(row);
+                });
+            }
+        }catch(e){ /* silent */ }
+    }
+
+    async function onDeptChange(){
+        const deptId = document.getElementById('tok-dept-select').value;
+        const docSelect = document.getElementById('tok-doctor-select');
+        document.getElementById('doctor-details-box').style.display = 'none';
+        docSelect.innerHTML = '<option value="">Loading doctors...</option>';
+        if(!deptId){ docSelect.innerHTML = '<option value="">Select a department first</option>'; return; }
+
+        try{
+            const res = await fetch(base() + '/doctors', { headers: authHeaders() });
+            const data = await res.json();
+            doctorListCache = data;
+            const filtered = data.filter(doc => doc.department && doc.department.id == deptId);
+
+            docSelect.innerHTML = '<option value="">Select a doctor</option>';
+            if(filtered.length === 0){
+                docSelect.innerHTML = '<option value="">No doctors in this department yet</option>';
+                return;
+            }
+            filtered.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = doc.name + ' (' + (doc.qualification || 'Doctor') + ')';
+                docSelect.appendChild(opt);
+            });
+        }catch(e){ docSelect.innerHTML = '<option value="">Error loading doctors</option>'; }
+    }
+
+    function onDoctorSelectChange(){
+        const docId = document.getElementById('tok-doctor-select').value;
+        const infoBox = document.getElementById('doctor-details-box');
+        if(!docId){ infoBox.style.display = 'none'; return; }
+
+        const doc = doctorListCache.find(d => d.id == docId);
+        if(doc){
+            document.getElementById('doc-info-name').textContent = doc.name;
+            document.getElementById('doc-info-qual').textContent = doc.qualification || 'N/A';
+            document.getElementById('doc-info-exp').textContent = doc.experienceYears || '0';
+            document.getElementById('doc-info-days').textContent = doc.visitingDays || 'N/A';
+            document.getElementById('doc-info-slots').textContent = doc.timeSlots || 'N/A';
+            infoBox.style.display = 'block';
+        }
+    }
+
+    async function loadDoctorsIntoSelect(selectId, keepSelection){
+        const sel = document.getElementById(selectId);
+        const prevValue = keepSelection ? sel.value : null;
+        try{
+            const res = await fetch(base() + '/doctors', { headers: authHeaders() });
+            const data = await res.json();
+            sel.innerHTML = '<option value="">Select a doctor</option>';
+            data.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = doc.name + (doc.department ? ' — ' + doc.department.name : '');
+                sel.appendChild(opt);
+            });
+            if(prevValue) sel.value = prevValue;
+            if(sel.value) onDoctorQueueSelect();
+        }catch(e){ sel.innerHTML = '<option value="">Error loading doctors</option>'; }
+    }
+
+    async function loadDoctorsForAdmin(){
+        try{
+            const res = await fetch(base() + '/doctors', { headers: authHeaders() });
+            const data = await res.json();
+            const list = document.getElementById('doctor-list');
+            list.innerHTML = '';
+            data.forEach(doc => {
+                const row = document.createElement('div');
+                row.className = 'list-row';
+                row.innerHTML = '<span class="name">' + doc.name + ' (' + (doc.qualification || 'N/A') + ')</span><span class="meta">' +
+                    (doc.department ? doc.department.name : 'No department') + ' · ' + doc.experienceYears + ' yrs exp · ' + doc.visitingDays + '</span>';
+                list.appendChild(row);
+            });
+        }catch(e){ /* ignore */ }
+    }
+
+    async function addDepartment(){
+        const name = document.getElementById('dept-name').value.trim();
+        if(!name){ showMsg('out-department', 'Please enter a department name.', false); return; }
+        try{
+            const res = await fetch(base() + '/departments', {
+                method:'POST', headers: authHeaders({ 'Content-Type':'application/json' }),
+                body: JSON.stringify({ name })
+            });
+            if(!res.ok) throw new Error('Could not add department.');
+            document.getElementById('dept-name').value = '';
+            showMsg('out-department', '"' + name + '" was added successfully.', true);
+            loadDepartments();
+        }catch(e){ showMsg('out-department', e.message, false); }
+    }
+
+    async function addDoctor(){
+        const name = document.getElementById('doc-name').value.trim();
+        const deptId = document.getElementById('doc-dept-select').value;
+        const qual = document.getElementById('doc-qual').value.trim();
+        const exp = parseInt(document.getElementById('doc-exp').value, 10);
+
+        const daysSel = document.getElementById('doc-days-select').value;
+        const days = (daysSel === 'CUSTOM') ? document.getElementById('doc-days-custom').value.trim() : daysSel;
+
+        const slotsSel = document.getElementById('doc-slots-select').value;
+        const slots = (slotsSel === 'CUSTOM') ? document.getElementById('doc-slots-custom').value.trim() : slotsSel;
+
+        const username = document.getElementById('doc-username').value.trim();
+        const password = document.getElementById('doc-password').value.trim();
+        const avg = parseInt(document.getElementById('doc-avg').value, 10);
+
+        if(!name || !deptId || !username || !password){
+            showMsg('out-doctor', 'Please fill in doctor name, department, username, and password.', false);
+            return;
+        }
+
+        try{
+            const url = base() + '/doctors?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password);
+            const res = await fetch(url, {
+                method:'POST', headers: authHeaders({ 'Content-Type':'application/json' }),
+                body: JSON.stringify({
+                    name,
+                    department:{ id: parseInt(deptId,10) },
+                    qualification: qual,
+                    experienceYears: exp,
+                    visitingDays: days,
+                    timeSlots: slots,
+                    avgConsultMinutes: avg
+                })
+            });
+            if(!res.ok) throw new Error('Could not add doctor or username taken.');
+            document.getElementById('doc-name').value = '';
+            document.getElementById('doc-username').value = '';
+            document.getElementById('doc-password').value = '';
+            showMsg('out-doctor', '"' + name + '" was added successfully.', true);
+            loadDoctorsForAdmin();
+        }catch(e){ showMsg('out-doctor', e.message, false); }
+    }
+
+    async function generateToken(){
+        const doctorId = document.getElementById('tok-doctor-select').value;
+        if(!doctorId){ showMsg('out-token', 'Please select a department and doctor first.', false); return; }
+
+        const patientName = loggedInUsername || 'Patient';
+        const chosenSlot = document.getElementById('patient-slot-select').value;
+
+        try{
+            const res = await fetch(base() + '/tokens/' + doctorId + '?patientName=' + encodeURIComponent(patientName), {
+                method:'POST', headers: authHeaders()
+            });
+            if(!res.ok) throw new Error('Could not generate a token right now.');
+            const token = await res.json();
+
+            document.getElementById('out-token').style.display = 'none';
+            document.getElementById('token-result').style.display = 'block';
+            document.getElementById('token-number-display').textContent = '#' + token.tokenNumber;
+            document.getElementById('token-slot-display').textContent = 'Shift: ' + chosenSlot;
+            document.getElementById('token-wait-display').textContent = 'Checking estimated wait time...';
+
+            const waitRes = await fetch(base() + '/tokens/wait/' + doctorId + '/' + token.tokenNumber, { headers: authHeaders() });
+            const waitText = await waitRes.text();
+            document.getElementById('token-wait-display').textContent = 'Estimated wait: ' + waitText + ' minutes';
+        }catch(e){
+            document.getElementById('token-result').style.display = 'none';
+            showMsg('out-token', e.message, false);
+        }
+    }
+
+    async function callNext(){
+        const doctorId = document.getElementById('q-doc-select').value;
+        if(!doctorId){ showMsg('out-queue-action', 'Please select a doctor first.', false); return; }
+        try{
+            const res = await fetch(base() + '/tokens/next/' + doctorId, { method:'PUT', headers: authHeaders() });
+            if(!res.ok) throw new Error('No waiting patients to call.');
+            const token = await res.json();
+            showMsg('out-queue-action', 'Now serving patient ' + token.patientName + ' (token #' + token.tokenNumber + ')', true);
+            loadQueue();
+        }catch(e){ showMsg('out-queue-action', e.message, false); }
+    }
+
+    async function completeToken(doctorId, tokenNumber){
+        try{
+            await fetch(base() + '/tokens/complete/' + doctorId + '/' + tokenNumber, { method:'PUT', headers: authHeaders() });
+            loadQueue();
+        }catch(e){ showMsg('out-queue-action', 'Could not complete token.', false); }
+    }
+
+    async function skipToken(doctorId, tokenNumber){
+        try{
+            await fetch(base() + '/tokens/skip/' + doctorId + '/' + tokenNumber, { method:'PUT', headers: authHeaders() });
+            loadQueue();
+        }catch(e){ showMsg('out-queue-action', 'Could not skip token.', false); }
+    }
+
+    async function loadQueue(){
+        const doctorId = document.getElementById('q-doc-select').value;
+        if(!doctorId){ document.getElementById('queue-list').innerHTML = '<div class="list-row">Select a doctor to see their queue.</div>'; return; }
+
+        try{
+            const res = await fetch(base() + '/tokens/doctor/' + doctorId, { headers: authHeaders() });
+            const data = await res.json();
+            renderQueueList(data);
+        }catch(e){ document.getElementById('queue-list').innerHTML = '<div class="list-row">Error loading queue.</div>'; }
+    }
+</script>
+</body>
+</html>
